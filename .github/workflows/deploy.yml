@@ -1,0 +1,34 @@
+name: deploy to s3 + cloudfront
+on:
+  push:
+    branches:
+      - main
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout the repo
+        uses: actions/checkout@v6
+      - name: setup node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install dependencies
+        run: npm install
+      - name: build project
+        run: npm run build
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::308705121083:role/github-deploy-fe
+          aws-region: ap-south-1
+      - name: push to s3
+        run: aws s3 sync dist s3://react-fe-deploy --delete
+      - name: invalidate the cache to cloudfront
+        run: |
+          aws cloudfront create-invalidation \
+          --distribution-id E2Y7ODDSBN4ABQ \
+          --paths "/index.html"
